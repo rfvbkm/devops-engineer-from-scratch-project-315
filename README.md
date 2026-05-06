@@ -1,5 +1,8 @@
 # Project DevOps Deploy
 
+### Hexlet tests and linter status:
+[![Actions Status](https://github.com/rfvbkm/devops-engineer-from-scratch-project-315/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/rfvbkm/devops-engineer-from-scratch-project-315/actions)
+### CI status:
 ![CI](https://github.com/rfvbkm/project-devops-deploy/actions/workflows/ci.yml/badge.svg)
 
 Bulletin board service.
