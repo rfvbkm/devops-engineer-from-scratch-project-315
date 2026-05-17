@@ -8,6 +8,35 @@ The default `dev` profile uses an in-memory H2 database and seeds 10 sample bull
 
 API documentation is available via Swagger UI at `http://localhost:8080/swagger-ui/index.html`.
 
+## Быстрый старт в Docker
+
+Сборка и запуск через `make`:
+
+```bash
+make docker-build    # docker build -t project-devops-deploy:latest .
+make docker-run      # prod, интерактивно (логи в терминале, Ctrl+C — остановка)
+make docker-run-dev  # dev (H2 in-memory), без PostgreSQL/S3
+```
+
+Эквивалентные команды Docker напрямую:
+
+```bash
+docker build -t project-devops-deploy:latest .
+
+docker run --rm -it \
+  --name project-devops-deploy \
+  -p 8080:8080 -p 9090:9090 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  project-devops-deploy:latest
+```
+
+После старта проверьте работоспособность:
+
+- `curl http://localhost:8080/api/bulletins` — REST API.
+- `curl http://localhost:9090/actuator/health` — health-probe.
+
+Профиль `prod` ожидает доступ к PostgreSQL и (опционально) S3 — задайте переменные окружения из таблицы ниже через флаги `-e` или `--env-file`. Для быстрой локальной проверки можно переключить контейнер на профиль `dev` (in-memory H2): `-e SPRING_PROFILES_ACTIVE=dev`.
+
 ## Project layout
 
 - Backend (Spring Boot) lives in the repository root.
@@ -139,9 +168,21 @@ See [Makefile](./Makefile)
 Pass JVM flags via `JAVA_OPTS`:
 
 ```bash
-docker run --rm -p 8080:8080 \
-  -e JAVA_OPTS="-Xms256m -Xmx512m -Dspring.profiles.active=prod" \
-  ...
+make docker-build
+# или: docker build -t project-devops-deploy:latest .
+```
+
+Запуск контейнера:
+
+```bash
+make docker-run
+# dev-профиль (H2, без внешних сервисов):
+make docker-run-dev
+# или:
+docker run --rm -it -p 8080:8080 -p 9090:9090 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseContainerSupport" \
+  project-devops-deploy:latest
 ```
 
 Useful JVM options:

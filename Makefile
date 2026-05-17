@@ -1,3 +1,10 @@
+IMAGE_NAME ?= project-devops-deploy
+IMAGE_TAG ?= latest
+CONTAINER_NAME ?= project-devops-deploy
+APP_PORT ?= 8080
+MANAGEMENT_PORT ?= 9090
+SPRING_PROFILE ?= prod
+
 test:
 	./gradlew test
 
@@ -23,5 +30,24 @@ lint:
 
 lint-fix:
 	./gradlew spotlessApply
+
+docker-build:
+	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+
+docker-run:
+	docker run --rm -it \
+		--name $(CONTAINER_NAME) \
+		-p $(APP_PORT):8080 \
+		-p $(MANAGEMENT_PORT):9090 \
+		-e SPRING_PROFILES_ACTIVE=$(SPRING_PROFILE) \
+		$(IMAGE_NAME):$(IMAGE_TAG)
+
+docker-run-dev:
+	docker run --rm -it \
+		--name $(CONTAINER_NAME) \
+		-p $(APP_PORT):8080 \
+		-p $(MANAGEMENT_PORT):9090 \
+		-e SPRING_PROFILES_ACTIVE=dev \
+		$(IMAGE_NAME):$(IMAGE_TAG)
 
 .PHONY: build
