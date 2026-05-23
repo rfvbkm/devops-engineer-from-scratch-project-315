@@ -24,8 +24,6 @@
       - { port: "22", proto: tcp, comment: "SSH" }
       - { port: "80", proto: tcp, comment: "HTTP" }
       - { port: "443", proto: tcp, comment: "HTTPS" }
-      - { port: "8080", proto: tcp, comment: "Application" }
-      - { port: "9090", proto: tcp, comment: "Management" }
 
   tasks:
     - name: Update apt cache
@@ -115,3 +113,6 @@
     - name: Enable UFW
       community.general.ufw:
         state: enabled
+
+  roles:
+    - nginx

@@ -1,0 +1,17 @@
+---
+nginx_server_name: hexlet.mooo.com
+nginx_listen_port: 80
+
+nginx_upstream_host: 127.0.0.1
+nginx_upstream_port: "{{ app_port | default(8080) }}"
+
+nginx_uploads_dir: "{{ app_images_dir | default('/opt/project-devops-deploy/images') }}"
+
+nginx_cache_path: /var/cache/nginx/app
+nginx_cache_keys_zone: app_cache:10m
+nginx_cache_max_size: 100m
+nginx_cache_inactive: 60m
+nginx_static_cache_valid: 1d
+nginx_uploads_expires: 7d
+
+nginx_client_max_body_size: 20m

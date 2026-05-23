@@ -1,0 +1,62 @@
+upstream {{ app_name | default('project-devops-deploy') }}_backend {
+    server {{ nginx_upstream_host }}:{{ nginx_upstream_port }};
+    keepalive 32;
+}
+
+server {
+    listen {{ nginx_listen_port }};
+    server_name {{ nginx_server_name }};
+
+    client_max_body_size {{ nginx_client_max_body_size }};
+
+    access_log /var/log/nginx/{{ app_name | default('project-devops-deploy') }}.access.log;
+    error_log /var/log/nginx/{{ app_name | default('project-devops-deploy') }}.error.log;
+
+    # Загрузки: отдаём с диска (volume контейнера), при отсутствии — проксируем в приложение (S3).
+    location /api/files/raw {
+        if ($arg_key = "") {
+            return 404;
+        }
+        if ($arg_key ~ \.\.) {
+            return 403;
+        }
+
+        rewrite ^ /$arg_key break;
+        root {{ nginx_uploads_dir }};
+        try_files $uri @app_backend;
+
+        expires {{ nginx_uploads_expires }};
+        add_header Cache-Control "public";
+        access_log off;
+    }
+
+    # Статические ресурсы фронтенда — прокси с кешированием.
+    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|webp)$ {
+        proxy_pass http://{{ app_name | default('project-devops-deploy') }}_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        include /etc/nginx/proxy_params;
+
+        proxy_cache app_cache;
+        proxy_cache_valid 200 301 302 {{ nginx_static_cache_valid }};
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+        proxy_cache_lock on;
+        add_header X-Cache-Status $upstream_cache_status always;
+
+        expires {{ nginx_static_cache_valid }};
+    }
+
+    location / {
+        proxy_pass http://{{ app_name | default('project-devops-deploy') }}_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        include /etc/nginx/proxy_params;
+    }
+
+    location @app_backend {
+        proxy_pass http://{{ app_name | default('project-devops-deploy') }}_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        include /etc/nginx/proxy_params;
+    }
+}

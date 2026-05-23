@@ -1,0 +1,60 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure uploads directory exists for direct file serving
+  ansible.builtin.file:
+    path: "{{ nginx_uploads_dir }}"
+    state: directory
+    owner: "{{ app_dir_owner | default('root') }}"
+    group: "{{ app_dir_group | default('root') }}"
+    mode: "{{ app_dir_mode | default('0755') }}"
+
+- name: Ensure nginx cache directory exists
+  ansible.builtin.file:
+    path: "{{ nginx_cache_path }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Deploy proxy cache configuration
+  ansible.builtin.template:
+    src: proxy_cache.conf.j2
+    dest: /etc/nginx/conf.d/proxy_cache.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Validate and reload nginx
+
+- name: Deploy application site configuration
+  ansible.builtin.template:
+    src: app.conf.j2
+    dest: "/etc/nginx/sites-available/{{ app_name | default('project-devops-deploy') }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Validate and reload nginx
+
+- name: Enable application site
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ app_name | default('project-devops-deploy') }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ app_name | default('project-devops-deploy') }}.conf"
+    state: link
+  notify: Validate and reload nginx
+
+- name: Disable default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Validate and reload nginx
+
+- name: Ensure nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
