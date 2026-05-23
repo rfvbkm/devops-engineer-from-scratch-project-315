@@ -76,6 +76,97 @@ Key variables are read directly by Spring Boot (see `src/main/resources/applicat
 
 All other variables supported by Spring Boot can be overridden the same way; check the application configuration files if you need to confirm a property name.
 
+## Yandex Object Storage (ручная настройка)
+
+Приложение в профиле `prod` хранит изображения объявлений в S3-совместимом хранилище. Ниже — пошаговая настройка [Yandex Object Storage](https://yandex.cloud/ru/docs/storage/) через консоль управления. Альтернатива — [CLI `yc`](https://yandex.cloud/ru/docs/cli/quickstart).
+
+### 1. Создание бакета
+
+1. Откройте [консоль Yandex Cloud](https://console.cloud.yandex.ru/) и выберите каталог (folder), в котором будет жить хранилище.
+2. Перейдите в **Object Storage** → **Бакеты** → **Создать бакет**.
+3. Задайте имя бакета — оно должно быть **глобально уникальным** в Object Storage (латиница в нижнем регистре, цифры, дефис; 3–63 символа). Пример: `hexlet-bulletins-prod`.
+4. **Класс хранилища**: Standard.
+5. **Доступ к списку объектов**: ограниченный (бакет приватный). Приложение отдаёт ссылки через presigned URL, публичный доступ не нужен.
+6. Остальные параметры оставьте по умолчанию и нажмите **Создать бакет**.
+
+Через CLI (опционально):
+
+```bash
+yc storage bucket create --name hexlet-bulletins-prod --default-storage-class standard
+```
+
+### 2. Сервисный аккаунт
+
+Приложению нужен отдельный сервисный аккаунт с правами на запись и чтение объектов в бакете.
+
+1. **IAM** → **Сервисные аккаунты** → **Создать сервисный аккаунт**.
+2. Имя, например: `bulletin-storage`.
+3. Назначьте роль на уровне каталога: **`storage.editor`** — достаточно для загрузки и чтения объектов во всех бакетах каталога. Если нужен доступ только к одному бакету, вместо роли на каталог можно выдать права через ACL бакета (шаг ниже).
+4. Сохраните сервисный аккаунт.
+
+Через CLI:
+
+```bash
+yc iam service-account create --name bulletin-storage
+
+yc resource-manager folder add-access-binding <FOLDER_ID> \
+  --role storage.editor \
+  --subject serviceAccount:<SERVICE_ACCOUNT_ID>
+```
+
+**ACL бакета (альтернатива роли на каталог):** откройте бакет → **Безопасность** → **ACL** → добавьте сервисный аккаунт с правами **READ** и **WRITE**.
+
+### 3. Статический ключ доступа
+
+1. Откройте созданный сервисный аккаунт → вкладка **Ключи доступа** → **Создать ключ доступа** → **Статический ключ доступа**.
+2. Описание — произвольное (например, `bulletin-app`).
+3. После создания сохраните **идентификатор ключа** (Access Key ID) и **секретный ключ** (Secret Access Key). Секрет показывается **один раз**; восстановить его нельзя — при потере создайте новый ключ.
+
+Через CLI:
+
+```bash
+yc iam access-key create --service-account-name bulletin-storage
+```
+
+В выводе будут поля `key_id` и `secret`.
+
+### 4. Переменные окружения
+
+Подставьте полученные значения в переменные из таблицы выше (или в `group_vars/servers/vault.yml` для Ansible):
+
+| Переменная | Значение для Yandex Cloud |
+|------------|---------------------------|
+| `STORAGE_S3_BUCKET` | имя бакета, например `hexlet-bulletins-prod` |
+| `STORAGE_S3_REGION` | `ru-central1` |
+| `STORAGE_S3_ENDPOINT` | `https://storage.yandexcloud.net` |
+| `STORAGE_S3_ACCESSKEY` | идентификатор статического ключа |
+| `STORAGE_S3_SECRETKEY` | секретный ключ |
+| `STORAGE_S3_CDNURL` | необязательно; префикс публичного CDN, если настроен |
+
+Пример для локального запуска:
+
+```bash
+export STORAGE_S3_BUCKET=hexlet-bulletins-prod
+export STORAGE_S3_REGION=ru-central1
+export STORAGE_S3_ENDPOINT=https://storage.yandexcloud.net
+export STORAGE_S3_ACCESSKEY=YCAJ...
+export STORAGE_S3_SECRETKEY=YCP...
+```
+
+Для Ansible скопируйте `group_vars/servers/vault.yml.example` в `vault.yml`, заполните поля `vault_storage_s3_*` и зашифруйте: `ansible-vault encrypt group_vars/servers/vault.yml`.
+
+### 5. Проверка доступа
+
+С установленным [AWS CLI](https://aws.amazon.com/cli/) и настроенным endpoint:
+
+```bash
+aws --endpoint-url=https://storage.yandexcloud.net \
+  s3 ls s3://hexlet-bulletins-prod/ \
+  --region ru-central1
+```
+
+После деплоя приложения загрузите изображение через UI и убедитесь, что объект появился в бакете (префикс `bulletins/`).
+
 ## Requirements
 
 - JDK 21+.
