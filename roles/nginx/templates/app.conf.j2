@@ -3,14 +3,48 @@ upstream {{ app_name | default('project-devops-deploy') }}_backend {
     keepalive 32;
 }
 
+{% if nginx_ssl_ready | default(false) %}
 server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ nginx_server_name }};
+
+    location ^~ /.well-known/acme-challenge/ {
+        default_type "text/plain";
+        root {{ certbot_webroot }};
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+{% endif %}
+
+server {
+{% if nginx_ssl_ready | default(false) %}
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+
+    ssl_certificate {{ nginx_ssl_certificate }};
+    ssl_certificate_key {{ nginx_ssl_certificate_key }};
+    include {{ nginx_ssl_params_path }};
+{% else %}
     listen {{ nginx_listen_port }};
+    listen [::]:{{ nginx_listen_port }};
+{% endif %}
     server_name {{ nginx_server_name }};
 
     client_max_body_size {{ nginx_client_max_body_size }};
 
     access_log /var/log/nginx/{{ app_name | default('project-devops-deploy') }}.access.log;
     error_log /var/log/nginx/{{ app_name | default('project-devops-deploy') }}.error.log;
+
+{% if not (nginx_ssl_ready | default(false)) %}
+    location ^~ /.well-known/acme-challenge/ {
+        default_type "text/plain";
+        root {{ certbot_webroot }};
+    }
+{% endif %}
 
     # Загрузки: отдаём с диска (volume контейнера), при отсутствии — проксируем в приложение (S3).
     location /api/files/raw {

@@ -1,6 +1,7 @@
 ---
 nginx_server_name: hexlet.mooo.com
 nginx_listen_port: 80
+nginx_listen_port_ssl: 443
 
 nginx_upstream_host: 127.0.0.1
 nginx_upstream_port: "{{ app_port | default(8080) }}"
@@ -15,3 +16,13 @@ nginx_static_cache_valid: 1d
 nginx_uploads_expires: 7d
 
 nginx_client_max_body_size: 20m
+
+nginx_ssl_certificate: "/etc/letsencrypt/live/{{ nginx_server_name }}/fullchain.pem"
+nginx_ssl_certificate_key: "/etc/letsencrypt/live/{{ nginx_server_name }}/privkey.pem"
+nginx_ssl_params_path: /etc/nginx/snippets/ssl-params.conf
+
+certbot_enabled: true
+certbot_email: ""
+certbot_webroot: /var/www/certbot
+certbot_domains:
+  - "{{ nginx_server_name }}"

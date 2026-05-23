@@ -1,5 +1,6 @@
 ---
 nginx_server_name: hexlet.mooo.com
+certbot_email: admin@hexlet.mooo.com
 
 app_image: ghcr.io/rfvbkm/project-devops-deploy
 app_image_tag: latest
