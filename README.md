@@ -10,6 +10,14 @@ The default `dev` profile uses an in-memory H2 database and seeds 10 sample bull
 
 API documentation is available via Swagger UI at `http://localhost:8080/swagger-ui/index.html`.
 
+## Развёрнутый сервер
+
+DNS-имя: `hexlet.mooo.com`
+
+- Приложение: http://hexlet.mooo.com/
+- API: http://hexlet.mooo.com/api/bulletins
+- Swagger UI: http://hexlet.mooo.com/swagger-ui/index.html
+
 ## Быстрый старт в Docker
 
 Сборка и запуск через `make`:

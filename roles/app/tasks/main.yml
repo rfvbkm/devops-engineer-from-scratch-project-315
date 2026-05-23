@@ -64,9 +64,7 @@
     restart_policy: unless-stopped
     pull: never
     docker_host: "{{ app_docker_host }}"
-    published_ports:
-      - "{{ app_port }}:8080"
-      - "{{ app_management_port }}:9090"
+    network_mode: "{{ app_network_mode }}"
     env: "{{ app_container_env }}"
     volumes: "{{ app_container_volumes }}"
     comparisons:
