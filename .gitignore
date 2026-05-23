@@ -36,3 +36,7 @@ out/
 ### VS Code ###
 .vscode/
 *.db
+
+### Ansible ###
+group_vars/**/vault.yml
+.vault_pass

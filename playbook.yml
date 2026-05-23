@@ -79,6 +79,21 @@
         groups: docker
         append: true
 
+    - name: Install pip for Docker SDK
+      ansible.builtin.apt:
+        name: python3-pip
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install Docker SDK for Python
+      ansible.builtin.pip:
+        name:
+          - "docker>=7.1.0"
+          - requests-unixsocket
+        state: present
+        extra_args: --break-system-packages
+
     - name: Set UFW default incoming policy to deny
       community.general.ufw:
         direction: incoming
