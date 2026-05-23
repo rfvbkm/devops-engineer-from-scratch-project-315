@@ -175,6 +175,45 @@ aws --endpoint-url=https://storage.yandexcloud.net \
 - Make.
 - NodeJS 20+
 
+## Требования для деплоя
+
+Ansible-плейбуки запускаются с **хост-машины** и настраивают **целевой сервер** из группы `servers` в `inventory.ini`.
+
+### Хост-машина
+
+Машина, с которой выполняются `make provision` и `make deploy`:
+
+- **Ansible** 2.14+ и **Make**.
+- **Python 3** и **pip** (для модулей Ansible и коллекции `community.docker`).
+- **SSH-клиент** и приватный ключ с доступом к целевому серверу (логин без пароля или через `ssh-agent`).
+- Клон репозитория с настроенным `inventory.ini` (хост, пользователь, группа `servers`).
+- Зашифрованный `group_vars/servers/vault.yml` (создаётся из `vault.yml.example`) и пароль Vault локально — в файле `.vault_pass` или при интерактивном запросе.
+- Исходящий доступ в интернет для `ansible-galaxy collection install` (см. `requirements.yml`).
+
+Первый запуск установит коллекции Ansible автоматически:
+
+```bash
+make ansible-collections   # community.general, community.docker
+make provision             # первичная настройка сервера (один раз)
+make deploy                # деплой/обновление контейнера приложения
+```
+
+### Целевая машина (сервер)
+
+Сервер из `inventory.ini`, куда деплоится приложение. Плейбуки рассчитаны на **Debian/Ubuntu** (используется `apt`):
+
+- **SSH** на порту 22, пользователь с правами **sudo** (Ansible работает с `become: true`).
+- **Python 3** на сервере (`ansible_python_interpreter=/usr/bin/python3` в `inventory.ini`).
+- Свободные входящие порты **80** и **443** (HTTP/HTTPS для nginx и Let's Encrypt). Порт **22** — для администрирования.
+- **DNS A-запись** домена (`nginx_server_name` в `group_vars/servers/main.yml`) должна указывать на IP сервера до выпуска TLS-сертификата.
+- Исходящий доступ в интернет: установка пакетов (`apt`), Docker Engine, certbot, pull образа из GHCR.
+
+Плейбук `playbook.yml` устанавливает на сервер Docker, nginx, certbot и настраивает UFW. Роль `app` запускает контейнер приложения; внешние зависимости профиля `prod` задаются через vault:
+
+- **PostgreSQL** — внешняя БД (например, Supabase); параметры подключения в `vault_spring_datasource_*`.
+- **Yandex Object Storage** — S3-хранилище для изображений; параметры в `vault_storage_s3_*` (см. раздел выше).
+- **GHCR** — приватный registry; при необходимости логин/пароль в `vault_docker_registry_*`.
+
 ## Running
 
 ### Backend (local dev profile)
